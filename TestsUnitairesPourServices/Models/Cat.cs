@@ -3,6 +3,7 @@ namespace TestsUnitairesPourServices.Models
 {
 	public class Cat
 	{
+		// Un commentaire
 		public Cat()
 		{
 		}
