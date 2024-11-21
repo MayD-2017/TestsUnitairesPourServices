@@ -9,7 +9,7 @@ namespace TestsUnitairesPourServices.Services.Tests
     [TestClass()]
     public class CatsServiceTests
     {
-        DbContextOptions<ApplicationDBContext> options;
+        ApplicationDBContext _db;
 
         private const int CLEAN_HOUSE_ID = 1;
         private const int DIRTY_HOUSE_ID = 2;
@@ -17,21 +17,20 @@ namespace TestsUnitairesPourServices.Services.Tests
         private const int WILD_CAT_ID = 1;
         private const int CAT_IN_DIRTY_HOUSE_ID = 2;
 
-        public CatsServiceTests()
-        {
-            options = new DbContextOptionsBuilder<ApplicationDBContext>()
-                .UseInMemoryDatabase(databaseName: "CatsService")
-                .UseLazyLoadingProxies(true)
-                .Options;
-        }
-
         [TestInitialize]
         public void Init()
         {
-            // TODO avoir la durée de vie d'un context la plus petite possible
-            using ApplicationDBContext db = new ApplicationDBContext(options);
+            // En utilisant un nom de BD différent pour chaque test, pas besoin de faire de clean up de la BD à chaque fois
+            string dbName = Guid.NewGuid().ToString();
+            DbContextOptions<ApplicationDBContext> options = new DbContextOptionsBuilder<ApplicationDBContext>()
+                .UseInMemoryDatabase(databaseName: dbName)
+                .UseLazyLoadingProxies(true)
+                .Options;
 
-            db.Cat.Add(new Cat()
+            // TODO avoir la durée de vie d'un context la plus petite possible
+            _db = new ApplicationDBContext(options);
+
+            _db.Cat.Add(new Cat()
             {
                 Id = WILD_CAT_ID,
                 Name = "Lonely",
@@ -52,8 +51,8 @@ namespace TestsUnitairesPourServices.Services.Tests
                 OwnerName = "Bob"
             };
 
-            db.House.Add(maisonPropre);
-            db.House.Add(maisonSale);
+            _db.House.Add(maisonPropre);
+            _db.House.Add(maisonSale);
 
             Cat chatPasPropre = new Cat()
             {
@@ -62,26 +61,22 @@ namespace TestsUnitairesPourServices.Services.Tests
                 Age = 3,
                 House = maisonSale
             };
-            db.Cat.Add(chatPasPropre);
-            db.SaveChanges();
+            _db.Cat.Add(chatPasPropre);
+            _db.SaveChanges();
         }
 
         [TestCleanup]
         public void Dispose()
         {
-            using ApplicationDBContext db = new ApplicationDBContext(options);
-            db.Cat.RemoveRange(db.Cat);
-            db.House.RemoveRange(db.House);
-            db.SaveChanges();
+            _db.Dispose();
         }
 
         [TestMethod()]
         public void MoveTest()
         {
-            using ApplicationDBContext db = new ApplicationDBContext(options);
-            var catsService = new CatsService(db);
-            var maisonPropre = db.House.Find(CLEAN_HOUSE_ID)!;
-            var maisonSale = db.House.Find(DIRTY_HOUSE_ID)!;
+            var catsService = new CatsService(_db);
+            var maisonPropre = _db.House.Find(CLEAN_HOUSE_ID)!;
+            var maisonSale = _db.House.Find(DIRTY_HOUSE_ID)!;
 
             // Tout est bon, le chat va être dans une maison propre
             var chatMaintenantPropre = catsService.Move(CAT_IN_DIRTY_HOUSE_ID, maisonSale, maisonPropre);
@@ -91,10 +86,9 @@ namespace TestsUnitairesPourServices.Services.Tests
         [TestMethod()]
         public void MoveTestCatNotFound()
         {
-            using ApplicationDBContext db = new ApplicationDBContext(options);
-            var catsService = new CatsService(db);
-            var maisonPropre = db.House.Find(CLEAN_HOUSE_ID)!;
-            var maisonSale = db.House.Find(DIRTY_HOUSE_ID)!;
+            var catsService = new CatsService(_db);
+            var maisonPropre = _db.House.Find(CLEAN_HOUSE_ID)!;
+            var maisonSale = _db.House.Find(DIRTY_HOUSE_ID)!;
 
             //Retourne null si le chat ne peut pas être trouvé (aucun chat avec Id: 42)
             var cat = catsService.Move(42, maisonSale, maisonPropre);
@@ -104,10 +98,9 @@ namespace TestsUnitairesPourServices.Services.Tests
         [TestMethod()]
         public void MoveTestNoHouse()
         {
-            using ApplicationDBContext db = new ApplicationDBContext(options);
-            var catsService = new CatsService(db);
-            var maisonPropre = db.House.Find(CLEAN_HOUSE_ID)!;
-            var maisonSale = db.House.Find(DIRTY_HOUSE_ID)!;
+            var catsService = new CatsService(_db);
+            var maisonPropre = _db.House.Find(CLEAN_HOUSE_ID)!;
+            var maisonSale = _db.House.Find(DIRTY_HOUSE_ID)!;
 
             //Le chat avec l'Id 1 n'a pas de maison
             Exception e = Assert.ThrowsException<WildCatException>(() => catsService.Move(WILD_CAT_ID, maisonSale, maisonPropre));
@@ -117,10 +110,9 @@ namespace TestsUnitairesPourServices.Services.Tests
         [TestMethod()]
         public void MoveTestWrongHouse()
         {
-            using ApplicationDBContext db = new ApplicationDBContext(options);
-            var catsService = new CatsService(db);
-            var maisonPropre = db.House.Find(CLEAN_HOUSE_ID)!;
-            var maisonSale = db.House.Find(DIRTY_HOUSE_ID)!;
+            var catsService = new CatsService(_db);
+            var maisonPropre = _db.House.Find(CLEAN_HOUSE_ID)!;
+            var maisonSale = _db.House.Find(DIRTY_HOUSE_ID)!;
 
             // Les maisons sont inversées
             Exception e = Assert.ThrowsException<DontStealMyCatException>(() => catsService.Move(CAT_IN_DIRTY_HOUSE_ID, maisonPropre, maisonSale));
