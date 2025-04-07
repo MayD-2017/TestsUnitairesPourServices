@@ -104,7 +104,7 @@ namespace TestsUnitairesPourServices.Services.Tests
             //Act
             var cat = _catservice.Move(CHAT_1, maison1, maison2);
             //Assert
-            Assert.AreNotEqual(cat, null);
+            Assert.IsNotNull(cat);
         }
 
         [TestMethod]
@@ -119,7 +119,7 @@ namespace TestsUnitairesPourServices.Services.Tests
             if (_db.Cat.Any(c => c.Id == id)) Assert.Fail(); //Si id existe, le test devient inutile. Il ne retournera pas null.
             var cat = _catservice.Move(id, maison1, maison2);
             //Assert
-            Assert.AreEqual(cat.House, null);
+            Assert.IsNull(cat.House);
         }
 
         [TestMethod]
@@ -144,10 +144,11 @@ namespace TestsUnitairesPourServices.Services.Tests
             House? maison1 = _db.House.Find(MAISON_1);
             House? maison2 = _db.House.Find(MAISON_2);
             //Act
-            var cat = _catservice.Move(CHAT_2, maison2, maison1);
+            //var cat = _catservice.Move(CHAT_2, maison2, maison1);
             //Assert
-            var exception = Assert.ThrowsException<DontStealMyCatException>(() => cat);
+            var exception = Assert.ThrowsException<DontStealMyCatException>(() => _catservice.Move(CHAT_2, maison2, maison1));
             Assert.AreEqual("Touche pas à mon chat!", exception.Message);
+
         }
     }
     
